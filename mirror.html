@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telescope Mirror Cooling Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        @media (max-width: 640px) {
+            .input-group {
+                grid-template-columns: 1fr;
+                gap: 0.25rem;
+            }
+            .main-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        .result-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Telescope Mirror Cooling Simulator</h1>
+            <p class="mt-2 text-lg text-gray-600">Model the thermal acclimation of your primary mirror.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 main-grid">
+            <!-- CONTROLS PANEL -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h2 class="text-2xl font-semibold mb-6 border-b pb-3">Parameters</h2>
+                
+                <form id="params-form" class="space-y-6">
+                    <div>
+                        <h3 class="font-semibold text-lg text-gray-700 mb-3">Mirror Properties</h3>
+                        <div class="space-y-4">
+                            <div class="input-group">
+                                <label for="diameter" class="font-medium text-gray-600">Diameter (in)</label>
+                                <input type="number" id="diameter" value="20" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="input-group">
+                                <label for="thickness" class="font-medium text-gray-600">Thickness (in)</label>
+                                <input type="number" id="thickness" value="1.5" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="input-group">
+                                <label for="material" class="font-medium text-gray-600">Material</label>
+                                <select id="material" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="boro">Borosilicate (Pyrex)</option>
+                                    <option value="plate">Plate Glass (Soda-Lime)</option>
+                                    <option value="fused">Fused Silica</option>
+                                    <option value="zerodur">Zerodur</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-lg text-gray-700 mb-3">Thermal Conditions</h3>
+                        <div class="space-y-4">
+                            <div class="input-group">
+                                <label for="initialTemp" class="font-medium text-gray-600">Initial Temp (°F)</label>
+                                <input type="number" id="initialTemp" value="75" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="input-group">
+                                <label for="ambientTemp" class="font-medium text-gray-600">Ambient Temp (°F)</label>
+                                <input type="number" id="ambientTemp" value="60" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                             <div class="input-group">
+                                <label for="fan" class="font-medium text-gray-600">Fan Cooling</label>
+                                <select id="fan" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="0">Off (Free Convection)</option>
+                                    <option value="1">Gentle Airflow (1 m/s)</option>
+                                    <option value="3">Medium Fan (3 m/s)</option>
+                                    <option value="5">Strong Fan (5 m/s)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        Calculate Cooling Curve
+                    </button>
+                </form>
+            </div>
+
+            <!-- RESULTS PANEL -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <div id="results-container" class="hidden">
+                    <h2 class="text-2xl font-semibold mb-4 border-b pb-3">Results</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="result-card">
+                            <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Time Constant (τ)</h4>
+                            <p id="time-constant" class="text-3xl font-bold text-indigo-600"></p>
+                        </div>
+                         <div class="result-card">
+                            <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Mass</h4>
+                            <p id="mirror-mass" class="text-3xl font-bold text-indigo-600"></p>
+                        </div>
+                        <div class="result-card">
+                            <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">95% Cooled Time</h4>
+                            <p id="cooled-time" class="text-3xl font-bold text-indigo-600"></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <canvas id="coolingChart"></canvas>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time (Hours)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mirror Temp (°F)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delta T (°F)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% Cooled</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-table" class="bg-white divide-y divide-gray-200">
+                                <!-- Data will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="welcome-message" class="text-center py-20">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">Ready to Calculate</h3>
+                    <p class="mt-1 text-sm text-gray-500">Enter your mirror parameters and click the button to see the cooling analysis.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Chart.js Global Configuration ---
+        let coolingChart = null;
+
+        // --- Material Properties Database (Density in kg/m^3, Specific Heat in J/kg·K) ---
+        const materials = {
+            'boro': { density: 2230, specificHeat: 830, name: 'Borosilicate' },
+            'plate': { density: 2500, specificHeat: 840, name: 'Plate Glass' },
+            'fused': { density: 2201, specificHeat: 740, name: 'Fused Silica' },
+            'zerodur': { density: 2530, specificHeat: 821, name: 'Zerodur' }
+        };
+
+        // --- Physics & Conversion Constants ---
+        const G = 9.81; // m/s^2
+
+        // --- DOM Elements ---
+        const form = document.getElementById('params-form');
+        
+        /**
+         * Main calculation function triggered on form submission.
+         * @param {Event} e - The form submission event.
+         */
+        function calculateCooling(e) {
+            e.preventDefault();
+
+            // --- 1. Get and Convert Inputs ---
+            const diameterIn = parseFloat(document.getElementById('diameter').value);
+            const thicknessIn = parseFloat(document.getElementById('thickness').value);
+            const materialKey = document.getElementById('material').value;
+            const initialTempF = parseFloat(document.getElementById('initialTemp').value);
+            const ambientTempF = parseFloat(document.getElementById('ambientTemp').value);
+            const fanVelocity = parseFloat(document.getElementById('fan').value);
+
+            // Convert to SI units for calculation
+            const D = diameterIn * 0.0254; // m
+            const L_thick = thicknessIn * 0.0254; // m
+            const initialTempK = (initialTempF - 32) * 5 / 9 + 273.15;
+            const ambientTempK = (ambientTempF - 32) * 5 / 9 + 273.15;
+            const deltaT_initial_F = initialTempF - ambientTempF;
+
+            if (deltaT_initial_F <= 0) {
+                alert("Initial temperature must be higher than ambient temperature for a cooling calculation.");
+                return;
+            }
+
+            const material = materials[materialKey];
+            
+            // --- 2. Calculate Mirror Geometry and Mass ---
+            const A_face = Math.PI * Math.pow(D / 2, 2); // m^2
+            const A_edge = Math.PI * D * L_thick; // m^2
+            const A_total = 2 * A_face + A_edge; // m^2
+            const volume = A_face * L_thick; // m^3
+            const mass = material.density * volume; // kg
+
+            // --- 3. Calculate Convective Heat Transfer Coefficient (h) ---
+            const T_film_K = (initialTempK + ambientTempK) / 2;
+            
+            // Properties of air at the film temperature
+            const k_air = 0.0262; // Thermal conductivity (W/m·K)
+            const nu_air = 1.6e-5; // Kinematic viscosity (m^2/s)
+            const Pr_air = 0.71; // Prandtl number
+            const beta_air = 1 / T_film_K; // Thermal expansion coefficient (1/K)
+            const deltaT_K = initialTempK - ambientTempK;
+
+            // Calculate 'h' for each surface type
+            const h_top = calculate_h_natural(D / 4, deltaT_K, G, beta_air, nu_air, Pr_air, k_air, 'top');
+            const h_edge = calculate_h_natural(L_thick, deltaT_K, G, beta_air, nu_air, Pr_air, k_air, 'vertical');
+            
+            let h_bottom;
+            if (fanVelocity > 0) {
+                // Forced convection on the back surface
+                h_bottom = calculate_h_forced(D, fanVelocity, nu_air, Pr_air, k_air);
+            } else {
+                // Natural convection on the back surface
+                h_bottom = calculate_h_natural(D / 4, deltaT_K, G, beta_air, nu_air, Pr_air, k_air, 'bottom');
+            }
+
+            // Weighted average heat transfer coefficient
+            const h_avg = (h_top * A_face + h_bottom * A_face + h_edge * A_edge) / A_total;
+
+            // --- 4. Calculate Thermal Time Constant (tau) ---
+            const tau_seconds = (mass * material.specificHeat) / (h_avg * A_total);
+            const tau_hours = tau_seconds / 3600;
+
+            // --- 5. Generate Data for Chart and Table ---
+            const timePoints = 25;
+            const maxTime = Math.max(12, Math.ceil(tau_hours * 5)); // Show at least 12 hours or 5x tau
+            const timeStep = maxTime / timePoints;
+            
+            let labels = [];
+            let tempData = [];
+            let tableData = [];
+
+            for (let i = 0; i <= timePoints; i++) {
+                const t_hr = i * timeStep;
+                const currentTempF = ambientTempF + deltaT_initial_F * Math.exp(-t_hr / tau_hours);
+                const deltaT_F = currentTempF - ambientTempF;
+                const cooled_percent = (1 - (deltaT_F / deltaT_initial_F)) * 100;
+
+                labels.push(t_hr.toFixed(1));
+                tempData.push(currentTempF.toFixed(2));
+                tableData.push({
+                    time: t_hr.toFixed(1),
+                    temp: currentTempF.toFixed(1),
+                    delta: deltaT_F.toFixed(1),
+                    percent: Math.min(100, cooled_percent).toFixed(0)
+                });
+            }
+
+            // --- 6. Update UI ---
+            displayResults(tau_hours, mass, tableData, labels, tempData, deltaT_initial_F, ambientTempF);
+        }
+
+        /**
+         * Calculates natural convection heat transfer coefficient 'h'.
+         * @param {number} L - Characteristic length (m).
+         * @param {number} deltaT - Temperature difference (K).
+         * @returns {number} The heat transfer coefficient h (W/m^2·K).
+         */
+        function calculate_h_natural(L, deltaT, g, beta, nu, Pr, k, type) {
+            const Gr = (g * beta * deltaT * Math.pow(L, 3)) / Math.pow(nu, 2); // Grashof number
+            const Ra = Gr * Pr; // Rayleigh number
+            let Nu = 0; // Nusselt number
+
+            if (type === 'top') { // Hot surface facing up
+                Nu = (Ra > 1e4 && Ra < 1e7) ? 0.54 * Math.pow(Ra, 0.25) : 0.15 * Math.pow(Ra, 1 / 3);
+            } else if (type === 'bottom') { // Hot surface facing down
+                Nu = 0.27 * Math.pow(Ra, 0.25);
+            } else { // Vertical surface (edge)
+                const term1 = 0.825;
+                const term2_num = 0.387 * Math.pow(Ra, 1/6);
+                const term2_den = Math.pow(1 + Math.pow(0.492 / Pr, 9/16), 8/27);
+                Nu = Math.pow(term1 + term2_num / term2_den, 2);
+            }
+            return (Nu * k) / L;
+        }
+
+        /**
+         * Calculates forced convection heat transfer coefficient 'h' for flow over a flat plate.
+         * @param {number} L - Characteristic length (m), the diameter.
+         * @param {number} V - Air velocity (m/s).
+         * @returns {number} The heat transfer coefficient h (W/m^2·K).
+         */
+        function calculate_h_forced(L, V, nu, Pr, k) {
+            const Re = (V * L) / nu; // Reynolds number
+            let Nu = 0; // Nusselt number
+
+            // Correlations for mixed laminar/turbulent flow over a flat plate
+            if (Re < 5e5) { // Mostly laminar
+                Nu = 0.664 * Math.pow(Re, 0.5) * Math.pow(Pr, 1/3);
+            } else { // Turbulent
+                Nu = (0.037 * Math.pow(Re, 0.8) - 871) * Math.pow(Pr, 1/3);
+            }
+            return (Nu * k) / L;
+        }
+
+        /**
+         * Renders all the results to the DOM.
+         */
+        function displayResults(tau_hours, mass, tableData, labels, tempData, deltaT_initial_F, ambientTempF) {
+            document.getElementById('results-container').classList.remove('hidden');
+            document.getElementById('welcome-message').classList.add('hidden');
+
+            // Update summary cards
+            document.getElementById('time-constant').textContent = `${tau_hours.toFixed(2)} hrs`;
+            document.getElementById('mirror-mass').textContent = `${(mass * 2.20462).toFixed(1)} lbs`;
+            // Time to cool to 95% is 3 * tau
+            document.getElementById('cooled-time').textContent = `${(3 * tau_hours).toFixed(1)} hrs`;
+
+            // Update table
+            const tableBody = document.getElementById('results-table');
+            tableBody.innerHTML = '';
+            tableData.forEach(row => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${row.time}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${row.temp}°F</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${row.delta}°F</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${row.percent}%</td>
+                    </tr>`;
+            });
+            
+            // Update chart
+            const ctx = document.getElementById('coolingChart').getContext('2d');
+            if (coolingChart) {
+                coolingChart.destroy();
+            }
+            coolingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Mirror Temperature (°F)',
+                        data: tempData,
+                        borderColor: 'rgb(79, 70, 229)',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Temperature (°F)'
+                            },
+                            min: ambientTempF - (deltaT_initial_F * 0.05)
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time (Hours)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Event Listeners ---
+        form.addEventListener('submit', calculateCooling);
+        window.addEventListener('load', () => {
+             // Run calculation on load with default values
+            form.dispatchEvent(new Event('submit'));
+        });
+
+    </script>
+
+</body>
+</html>
+
