@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moon Phase & Declination Graph - Next 2 Years</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.8.0/suncalc.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .chart-container {
+            position: relative;
+            height: 90vh; /* Fixed height for the container */
+            overflow-y: scroll; /* Enable vertical scrolling */
+        }
+        /* Custom scrollbar for a better look */
+        .chart-container::-webkit-scrollbar {
+            width: 10px;
+        }
+        .chart-container::-webkit-scrollbar-track {
+            background: #1f2937; /* bg-gray-800 */
+        }
+        .chart-container::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 10px;
+        }
+        .chart-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-7xl h-[90vh] bg-gray-800 shadow-2xl rounded-2xl p-4 md:p-6 flex flex-col">
+        <div class="flex-shrink-0 mb-4">
+            <h1 class="text-xl md:text-2xl font-bold text-white text-center">2-Year Moon Report</h1>
+            <p class="mt-1 text-sm text-gray-400 text-center">Vertical Timeline: Declination & Phase</p>
+        </div>
+        <div class="flex-grow chart-container" id="chart-container">
+             <div id="loading" class="absolute inset-0 flex items-center justify-center h-full text-gray-400 bg-gray-800 z-20 rounded-lg">
+                <p>Calculating astronomical data...</p>
+            </div>
+            <div style="height: 6000px;"> {/* Tall div to contain the canvas and enable scrolling */}
+                <canvas id="moonChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Helper functions for accurate declination ---
+        const PI = Math.PI;
+        const rad = PI / 180;
+        const e = rad * 23.4397; // Obliquity of the Earth
+
+        function toDays(date) {
+            return date.valueOf() / 86400000 - 0.5 + 2440588;
+        }
+
+        function declination(l, b) {
+            return Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l));
+        }
+
+        function moonCoords(d) {
+            const L = rad * (218.316 + 13.176396 * d);
+            const M = rad * (134.963 + 13.064993 * d);
+            const F = rad * (93.272 + 13.229350 * d);
+            const l = L + rad * 6.289 * Math.sin(M);
+            const b = rad * 5.128 * Math.sin(F);
+            return { dec: declination(l, b) };
+        }
+        // --- End of helper functions ---
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingIndicator = document.getElementById('loading');
+            const ctx = document.getElementById('moonChart').getContext('2d');
+
+            function getPhaseInfo(phase, lastPhase) {
+                if (lastPhase < 0.25 && phase >= 0.25) return { name: 'First Quarter', emoji: '🌓' };
+                if (lastPhase < 0.50 && phase >= 0.50) return { name: 'Full Moon', emoji: '🌕' };
+                if (lastPhase < 0.75 && phase >= 0.75) return { name: 'Last Quarter', emoji: '🌗' };
+                if (lastPhase > 0.75 && phase < 0.25) return { name: 'New Moon', emoji: '🌑' };
+                return null;
+            }
+
+            try {
+                const today = new Date();
+                const daysToCalc = 365 * 2;
+                const labels = [];
+                const declinationData = [];
+                const phasePointData = [];
+
+                let lastPhaseValue = SunCalc.getMoonIllumination(new Date(today).setDate(today.getDate() - 1)).phase;
+
+                for (let i = 0; i < daysToCalc; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    date.setHours(12, 0, 0, 0);
+                    const dateValue = date.valueOf();
+                    labels.push(dateValue);
+
+                    const d = toDays(dateValue);
+                    const moonPosition = moonCoords(d);
+                    const declinationDegrees = moonPosition.dec * (180 / PI);
+                    
+                    declinationData.push({x: declinationDegrees, y: dateValue});
+                    
+                    const moonIllumination = SunCalc.getMoonIllumination(date);
+                    const phaseInfo = getPhaseInfo(moonIllumination.phase, lastPhaseValue);
+
+                    if (phaseInfo) {
+                        phasePointData.push({
+                            x: declinationDegrees,
+                            y: dateValue,
+                            phase: phaseInfo
+                        });
+                    }
+                    lastPhaseValue = moonIllumination.phase;
+                }
+
+                const moonPhasePlugin = {
+                    id: 'moonPhasePlugin',
+                    afterDraw: chart => {
+                        const ctx = chart.ctx;
+                        const xAxis = chart.scales.x;
+                        const yAxis = chart.scales.y;
+                        ctx.save();
+                        ctx.font = '18px Inter';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        chart.config.data.datasets[1].data.forEach(point => {
+                            const pixelY = yAxis.getPixelForValue(point.y);
+                             if(pixelY > yAxis.top && pixelY < yAxis.bottom){ // Only draw visible emojis
+                                const pixelX = xAxis.getPixelForValue(point.x);
+                                ctx.fillText(point.phase.emoji, pixelX, pixelY - 25);
+                             }
+                        });
+                        ctx.restore();
+                    }
+                };
+
+                const moonChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Declination',
+                            data: declinationData,
+                            borderColor: 'rgb(34, 211, 238)',
+                            backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                        },
+                        {
+                            label: 'Key Phases',
+                            data: phasePointData,
+                            type: 'scatter',
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgb(250, 204, 21)',
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', // KEY CHANGE: Makes the chart horizontal (vertical time axis)
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { // This is now the time axis
+                                type: 'time',
+                                reverse: true, // Show latest date at the bottom
+                                time: {
+                                    unit: 'month',
+                                    tooltipFormat: 'MMM d, yyyy',
+                                    displayFormats: {
+                                        month: 'MMM yyyy'
+                                    }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: 'rgb(156, 163, 175)' }
+                            },
+                            x: { // This is now the declination axis
+                                position: 'top',
+                                title: { display: true, text: 'Declination (°)', color: 'rgb(156, 163, 175)' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: 'rgb(156, 163, 175)', callback: value => value.toFixed(0) + '°' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    title: tooltipItems => new Date(tooltipItems[0].parsed.y).toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}),
+                                    label: context => {
+                                        let label = context.dataset.label || '';
+                                        if (label === 'Declination') {
+                                           return `${label}: ${context.parsed.x.toFixed(4)}°`;
+                                        }
+                                        if (label === 'Key Phases'){
+                                            const phaseName = context.raw.phase.name;
+                                            return `${phaseName} ${context.raw.phase.emoji}`;
+                                        }
+                                        return null;
+                                    }
+                                }
+                            },
+                            // Zoom is not well-suited for this layout, scrolling is the primary interaction
+                            zoom: { enabled: false }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    plugins: [moonPhasePlugin]
+                });
+                
+                loadingIndicator.style.display = 'none';
+
+            } catch (error) {
+                loadingIndicator.innerHTML = '<p class="text-red-400">An error occurred setting up the graph. Please try again later.</p>';
+                console.error("Error setting up chart:", error);
+            }
+        });
+    </script>
+</body>
+</html>
