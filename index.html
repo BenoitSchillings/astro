@@ -2,63 +2,103 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    
-    <!-- =================================================================== -->
-    <!-- Option 1: Automatic Redirect (Most Common & Recommended)          -->
-    <!-- This will instantly redirect the user to mirror.html.             -->
-    <!-- The "0" in content="0; ..." is the delay in seconds.               -->
-    <!-- =================================================================== -->
-    
-    <title>Redirecting...</title>
-    <meta http-equiv="refresh" content="0; url=mirror.html">
-    
-    
-    <!-- =================================================================== -->
-    <!-- Option 2: Load in an Iframe (Embeds the page)                     -->
-    <!-- If you want to show mirror.html *inside* index.html,              -->
-    <!-- you can use an iframe. Uncomment the code below and delete        -->
-    <!-- the meta refresh tag from above.                                  -->
-    <!-- =================================================================== -->
-    
-    <!--
-    <title>Mirror Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selection Page</title>
     <style>
-        /* Basic styling to make the iframe fill the page */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
         body, html {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden; /* Hide scrollbars on the main page */
+            padding: 1rem;
+            box-sizing: border-box;
         }
-        iframe {
-            border: none; /* Remove the default iframe border */
+
+        .main-container {
             width: 100%;
-            height: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .card-container {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .card-link {
+            width: 100%;
+            max-width: 200px; /* Made card smaller */
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none; /* Remove underline from link */
+            color: inherit; /* Inherit text color */
+        }
+
+        .card-link:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+
+        .card-link img {
+            width: 100%;
+            height: 120px; /* Adjusted image height */
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-content {
+            padding: 1rem; /* Reduced padding */
+            text-align: left;
+        }
+
+        .card-content h2 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem; /* Reduced font size */
+            color: #222;
+        }
+
+        .card-content p {
+            color: #666;
+            font-size: 0.9rem; /* Reduced font size */
+            line-height: 1.4;
         }
     </style>
-    -->
-
 </head>
 <body>
-    
-    <!-- =================================================================== -->
-    <!-- For Option 1 (Redirect):                                          -->
-    <!-- This text will briefly appear before the redirect happens.        -->
-    <!-- It also provides a fallback link if the redirect fails.           -->
-    <!-- =================================================================== -->
-    
-    <p>If you are not redirected automatically, follow this <a href="mirror.html">link to mirror.html</a>.</p>
-    
-    
-    <!-- =================================================================== -->
-    <!-- For Option 2 (Iframe):                                            -->
-    <!-- The iframe tag below will display the content of mirror.html.     -->
-    <!-- Uncomment it if you are using this method.                        -->
-    <!-- =================================================================== -->
-    
-    <!--
-    <iframe src="mirror.html" title="Mirror Content"></iframe>
-    -->
+
+<div class="main-container">
+
+    <div class="card-container">
+        <!-- Moon Phase Link -->
+        <a href="moonphase.html" class="card-link">
+            <img src="https://images.unsplash.com/photo-1532202802378-df1493102353?q=80&w=2948&auto=format&fit=crop" alt="Phases of the Moon" onerror="this.onerror=null;this.src='https://placehold.co/600x400/000000/FFFFFF?text=Moon';">
+            <div class="card-content">
+                <h2>🌙 Moon Phase</h2>
+                <p>moon phases and declinaisons</p>
+            </div>
+        </a>
+
+        <!-- Mirror Link -->
+        <a href="mirror.html" class="card-link">
+            <img src="https://images.unsplash.com/photo-1632242312627-669e984d7a83?q=80&w=2787&auto=format&fit=crop" alt="A telescope mirror" onerror="this.onerror=null;this.src='https://placehold.co/600x400/4a4a4a/FFFFFF?text=Telescope';">
+            <div class="card-content">
+                <h2>🔭 Mirror</h2>
+                <p>Mirror cooling simulator</p>
+            </div>
+        </a>
+    </div>
+
+</div>
 
 </body>
 </html>
